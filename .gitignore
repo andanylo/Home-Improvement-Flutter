@@ -31,6 +31,8 @@ lib/generated_plugin_registrant.dart
 
 # Unity
 ios/UnityLibrary/
+android/unityLibrary
+unity/
 
 # iOS/XCode related
 **/ios/**/*.mode1v3

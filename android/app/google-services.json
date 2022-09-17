@@ -1,0 +1,83 @@
+{
+  "project_info": {
+    "project_number": "821601793959",
+    "firebase_url": "https://home-improvement-ver-2-default-rtdb.firebaseio.com",
+    "project_id": "home-improvement-ver-2",
+    "storage_bucket": "home-improvement-ver-2.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:821601793959:android:9361c18cdc74738959e882",
+        "android_client_info": {
+          "package_name": "com.HomeImprovement.com.unity.template.mobile2D"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "821601793959-ld7h398g1h35uaulack798e311ji0a47.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDui2zhxDBxn8rnL_eok7ufcEeZMznUaYM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "821601793959-ld7h398g1h35uaulack798e311ji0a47.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "821601793959-lve6tbgciuamjpnrp6qk76vvp0rdn0o0.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.homeImprovement"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:821601793959:android:393d0d4c74c0be9759e882",
+        "android_client_info": {
+          "package_name": "com.example.home_improvement"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "821601793959-ld7h398g1h35uaulack798e311ji0a47.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDui2zhxDBxn8rnL_eok7ufcEeZMznUaYM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "821601793959-ld7h398g1h35uaulack798e311ji0a47.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "821601793959-lve6tbgciuamjpnrp6qk76vvp0rdn0o0.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.homeImprovement"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_unity_widget/flutter_unity_widget.dart';
+import 'package:home_improvement/Database.dart';
+import 'package:home_improvement/FurnitureListPopUp.dart';
 import 'package:home_improvement/LoginPage.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -11,7 +13,6 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-
   runApp(MaterialApp(
       home: (FirebaseAuth.instance.currentUser != null)
           ? UnityDemoScreen()
@@ -26,6 +27,9 @@ class UnityDemoScreen extends StatefulWidget {
 }
 
 class _UnityDemoScreenState extends State<UnityDemoScreen> {
+  FurnitureListPopUpController furnitureListPopUpController =
+      FurnitureListPopUpController();
+
   static final GlobalKey<ScaffoldState> _scaffoldKey =
       GlobalKey<ScaffoldState>();
   late UnityWidgetController _unityWidgetController;
@@ -124,7 +128,10 @@ class _UnityDemoScreenState extends State<UnityDemoScreen> {
           child: Container(
               margin: EdgeInsets.only(bottom: 30),
               child: ElevatedButton(
-                onPressed: () {},
+                onPressed: () {
+                  furnitureListPopUpController
+                      .updateState(!furnitureListPopUpController.isShow);
+                },
                 style: ElevatedButton.styleFrom(
                   shape: CircleBorder(),
                   padding: EdgeInsets.all(24),
@@ -132,7 +139,11 @@ class _UnityDemoScreenState extends State<UnityDemoScreen> {
                 child: Icon(Icons.add),
               )),
         ),
-      )
+      ),
+      Align(
+        alignment: Alignment.bottomCenter,
+        child: FurnitureListPopUp(controller: furnitureListPopUpController),
+      ),
     ];
   }
 

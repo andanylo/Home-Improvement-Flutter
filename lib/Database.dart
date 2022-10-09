@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:firebase_database/firebase_database.dart';
 import 'package:home_improvement/FurnitureTemplate.dart';
 import 'package:home_improvement/User.dart';
@@ -11,7 +13,30 @@ class Database {
       "password": user.password,
       "username": user.username
     });
-    print("object set");
+  }
+
+  //Save furniture to user
+  static void saveFurniture(String uuid, String jsonObject) {
+    Map<String, dynamic> furnitureData = jsonDecode(jsonObject);
+
+    String furnitureName = furnitureData['name'];
+    String furnitureId = furnitureData['id'];
+
+    double xPos = furnitureData['xPos'];
+    double yPos = furnitureData['yPos'];
+
+    double xRot = furnitureData['xRot'];
+    double yRot = furnitureData['yRot'];
+    DatabaseReference db = FirebaseDatabase.instance
+        .ref("Furniture/" + uuid + "/" + furnitureName + "/" + furnitureId);
+
+    db.set({
+      "room_ID": "n/a",
+      "xPos": xPos,
+      "yPos": yPos,
+      "xRot": xRot,
+      "yRot": yRot
+    });
   }
 
   //Fetches furniture templates from firebase database, else throw an error

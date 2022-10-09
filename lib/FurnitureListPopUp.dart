@@ -7,6 +7,8 @@ import 'FurnitureTemplate.dart';
 //Controller with notifier
 class FurnitureListPopUpController with ChangeNotifier {
   bool isShow = false;
+  FurnitureTemplate? selectedTemplate;
+
   List<FurnitureTemplate> templates = [];
   void updateState(bool newState) {
     isShow = newState;
@@ -22,7 +24,11 @@ class FurnitureListPopUpController with ChangeNotifier {
 class FurnitureListPopUp extends StatefulWidget {
   final FurnitureListPopUpController controller;
 
-  FurnitureListPopUp({required this.controller});
+  //Function to return a selected template
+  final void Function(FurnitureTemplate) onTemplateSelect;
+
+  FurnitureListPopUp(
+      {required this.controller, required this.onTemplateSelect});
 
   _FurnitureListPopUp createState() => _FurnitureListPopUp();
 }
@@ -42,7 +48,6 @@ class _FurnitureListPopUp extends State<FurnitureListPopUp> {
   //Get templates and update controller
   Future<void> getTemplatesFromDatabase() async {
     List<FurnitureTemplate> templates = await Database.fetchTemplates();
-    print(templates.length);
     widget.controller.updateTemplates(templates);
   }
 
@@ -56,7 +61,7 @@ class _FurnitureListPopUp extends State<FurnitureListPopUp> {
             child: Column(children: [
               Stack(
                 children: [
-                  Align(
+                  const Align(
                     alignment: Alignment.topCenter,
                     child: Padding(
                       padding: EdgeInsets.only(top: 15),
@@ -80,18 +85,6 @@ class _FurnitureListPopUp extends State<FurnitureListPopUp> {
                   ),
                 ],
               ),
-
-              // Align(
-              //   alignment: Alignment.topRight,
-              //   child: Padding(
-              //       padding: EdgeInsets.all(5),
-              //       child: TextButton(
-              //           onPressed: () {
-              //             widget.controller
-              //                 .updateState(!widget.controller.isShow);
-              //           },
-              //           child: Text("Cancel"))),
-              // ),
               Expanded(
                   child: Padding(
                       padding: EdgeInsets.symmetric(horizontal: 5),
@@ -102,8 +95,14 @@ class _FurnitureListPopUp extends State<FurnitureListPopUp> {
                         mainAxisSpacing: 5,
                         children: List.generate(
                             widget.controller.templates.length, (index) {
-                          return FurnitureTemplateWidget(
-                              template: widget.controller.templates[index]);
+                          FurnitureTemplate template =
+                              widget.controller.templates[index];
+
+                          return GestureDetector(
+                              onTap: () => widget.onTemplateSelect(template),
+                              child: FurnitureTemplateWidget(
+                                template: template,
+                              ));
                         }),
                       )))
             ]),

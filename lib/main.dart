@@ -1,10 +1,14 @@
+import 'dart:ffi';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_unity_widget/flutter_unity_widget.dart';
 import 'package:home_improvement/Database.dart';
+import 'package:home_improvement/FurnitureEditButton.dart';
 import 'package:home_improvement/FurnitureListPopUp.dart';
 import 'package:home_improvement/LoginPage.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'FurnitureTemplate.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
@@ -13,10 +17,10 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  runApp(MaterialApp(
-      home: (FirebaseAuth.instance.currentUser != null)
-          ? UnityDemoScreen()
-          : UnityDemoScreen())); //(FirebaseAuth.instance.currentUser != null) ? LoginPage() : UnityDemoScreen())
+
+  FirebaseAuth.instance.authStateChanges().listen((User? user) {
+    runApp(MaterialApp(home: (user == null) ? LoginPage() : UnityDemoScreen()));
+  });
 }
 
 class UnityDemoScreen extends StatefulWidget {
@@ -46,6 +50,7 @@ class _UnityDemoScreenState extends State<UnityDemoScreen> {
   }
 
   var isEditing = false;
+  var shouldHideControls = false;
 
   Widget? unityWidget;
 
@@ -102,18 +107,111 @@ class _UnityDemoScreenState extends State<UnityDemoScreen> {
   }
 
   void onUnityMessage(message) {
-    print('Received message from unity: ${message.toString()}');
+    String mes = message as String;
+    String key = mes.substring(0, mes.indexOf(':'));
+    mes = mes.substring(mes.indexOf(':') + 1, mes.length);
+
+    if (key == 'movement') {
+      this.shouldHideControls = mes.toLowerCase() == 'true';
+      setState(() {});
+    } else if (key == 'saveFurniture') {
+      Database.saveFurniture(
+          (FirebaseAuth.instance.currentUser == null
+              ? ""
+              : FirebaseAuth.instance.currentUser!.uid),
+          mes);
+    }
   }
 
   //Set is editing, add 'Add' button
   void setIsEditing() {
     bool editing = !this.isEditing;
+    furnitureListPopUpController.selectedTemplate = null;
     _unityWidgetController.postMessage(
-        'EditSwitcher', 'changeEditingStatus', '$editing');
+        'UIManager', 'changeEditingStatus', '$editing');
 
     setState(() {
       this.isEditing = !this.isEditing;
     });
+  }
+
+  //Set current selected template options
+  void setSelectedTemplateState(FurnitureTemplate? template) {
+    furnitureListPopUpController.selectedTemplate = template;
+    setState(() {});
+  }
+
+  //Create a plus button
+  Widget createPlusButton() {
+    return SafeArea(
+      bottom: true,
+      child: Container(
+          margin: EdgeInsets.only(bottom: 30),
+          child: ElevatedButton(
+            onPressed: () {
+              furnitureListPopUpController
+                  .updateState(!furnitureListPopUpController.isShow);
+            },
+            style: ElevatedButton.styleFrom(
+              shape: CircleBorder(),
+              padding: EdgeInsets.all(24),
+            ),
+            child: Icon(Icons.add),
+          )),
+    );
+  }
+
+  void cancelFurnitureEditing() {
+    furnitureListPopUpController.selectedTemplate = null;
+    _unityWidgetController.postMessage(
+        'UIManager', 'cancelFurnitureEditing', '');
+    setState(() {});
+  }
+
+  //Create edit furniture buttons
+  Widget createEditFurnitureButtons() {
+    return SafeArea(
+        bottom: true,
+        child: Container(
+          margin: EdgeInsets.only(bottom: 30),
+          width: 300,
+          child: Row(
+            children: [
+              FurnitureEditButton(
+                icon: const Icon(
+                  Icons.cancel,
+                  size: 40,
+                ),
+                pressed: () {
+                  cancelFurnitureEditing();
+                },
+                foregroundColor: Colors.red,
+              ),
+              const Spacer(),
+              FurnitureEditButton(
+                pressed: () {
+                  _unityWidgetController.postMessage(
+                      'UIManager', 'rotateBy90Degrees', 'zxcxz');
+                },
+                icon: const Icon(
+                  Icons.rotate_left,
+                  size: 40,
+                ),
+              ),
+              const Spacer(),
+              FurnitureEditButton(
+                  pressed: () {
+                    _unityWidgetController.postMessage(
+                        'UIManager', 'saveFurniture', '');
+                    cancelFurnitureEditing();
+                  },
+                  icon: const Icon(
+                    Icons.check,
+                    size: 40,
+                  ))
+            ],
+          ),
+        ));
   }
 
   //Get widgets
@@ -122,27 +220,28 @@ class _UnityDemoScreenState extends State<UnityDemoScreen> {
     return [
       unity,
       Align(
-        alignment: Alignment.bottomCenter,
-        child: SafeArea(
-          bottom: true,
-          child: Container(
-              margin: EdgeInsets.only(bottom: 30),
-              child: ElevatedButton(
-                onPressed: () {
-                  furnitureListPopUpController
-                      .updateState(!furnitureListPopUpController.isShow);
-                },
-                style: ElevatedButton.styleFrom(
-                  shape: CircleBorder(),
-                  padding: EdgeInsets.all(24),
-                ),
-                child: Icon(Icons.add),
-              )),
-        ),
-      ),
+          alignment: Alignment.bottomCenter,
+          child: this.furnitureListPopUpController.selectedTemplate == null
+              ? createPlusButton()
+              : (this.shouldHideControls
+                  ? null
+                  : createEditFurnitureButtons())),
       Align(
         alignment: Alignment.bottomCenter,
-        child: FurnitureListPopUp(controller: furnitureListPopUpController),
+        child: FurnitureListPopUp(
+          controller: furnitureListPopUpController,
+          onTemplateSelect: (FurnitureTemplate template) {
+            //Assign selected template and hide list popup
+            setSelectedTemplateState(template);
+            furnitureListPopUpController.updateState(false);
+
+            _unityWidgetController
+                .postJsonMessage('UIManager', 'addNewFurniture', {
+              'furnitureName': template.furnitureName,
+              'furnitureImage': template.imageName,
+            });
+          },
+        ),
       ),
     ];
   }

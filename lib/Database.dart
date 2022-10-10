@@ -39,6 +39,19 @@ class Database {
     });
   }
 
+  //Fetch furnitures based on userID
+  static Future<String> fetchFurnitures(String uuid) async {
+    DatabaseReference db = FirebaseDatabase.instance.ref("Furniture/" + uuid);
+
+    final snapshot = await db.get();
+
+    if (snapshot.exists) {
+      String value = jsonEncode(snapshot.value);
+      return value;
+    }
+    return "";
+  }
+
   //Fetches furniture templates from firebase database, else throw an error
   static Future<List<FurnitureTemplate>> fetchTemplates() async {
     //Get reference of the database

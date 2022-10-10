@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:convert';
 import 'dart:ffi';
 
 import 'package:flutter/material.dart';
@@ -104,6 +106,19 @@ class _UnityDemoScreenState extends State<UnityDemoScreen> {
   // Callback that connects the created controller to the unity controller
   void onUnityCreated(controller) {
     this._unityWidgetController = controller;
+
+    fetchFurniture();
+  }
+
+  void fetchFurniture() {
+    FirebaseAuth.instance.authStateChanges().listen((User? user) async {
+      //Fetch furnitures
+      String jsonFurnitures = await Database.fetchFurnitures(user!.uid);
+      print(jsonFurnitures);
+      //Add furnitures to unity
+      this._unityWidgetController.postMessage(
+          'FurnitureAdder', 'recieveFurnituresFromDatabase', jsonFurnitures);
+    });
   }
 
   void onUnityMessage(message) {
@@ -165,6 +180,7 @@ class _UnityDemoScreenState extends State<UnityDemoScreen> {
     furnitureListPopUpController.selectedTemplate = null;
     _unityWidgetController.postMessage(
         'UIManager', 'cancelFurnitureEditing', '');
+
     setState(() {});
   }
 
@@ -232,14 +248,15 @@ class _UnityDemoScreenState extends State<UnityDemoScreen> {
           controller: furnitureListPopUpController,
           onTemplateSelect: (FurnitureTemplate template) {
             //Assign selected template and hide list popup
-            setSelectedTemplateState(template);
-            furnitureListPopUpController.updateState(false);
 
             _unityWidgetController
                 .postJsonMessage('UIManager', 'addNewFurniture', {
               'furnitureName': template.furnitureName,
               'furnitureImage': template.imageName,
             });
+
+            setSelectedTemplateState(template);
+            furnitureListPopUpController.updateState(false);
           },
         ),
       ),

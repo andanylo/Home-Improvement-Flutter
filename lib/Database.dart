@@ -16,7 +16,7 @@ class Database {
   }
 
   //Save furniture to user
-  static void saveFurniture(String uuid, String jsonObject) {
+  static void saveFurniture(String uuid, String jsonObject, bool isUpdating) {
     Map<String, dynamic> furnitureData = jsonDecode(jsonObject);
 
     String furnitureName = furnitureData['name'];
@@ -30,18 +30,36 @@ class Database {
     DatabaseReference db = FirebaseDatabase.instance
         .ref("Furniture/" + uuid + "/" + furnitureName + "/" + furnitureId);
 
-    db.set({
-      "room_ID": "n/a",
-      "xPos": xPos,
-      "yPos": yPos,
-      "xRot": xRot,
-      "yRot": yRot
-    });
+    if (isUpdating) {
+      db.update({
+        "room_ID": "n/a",
+        "xPos": xPos,
+        "yPos": yPos,
+        "xRot": xRot,
+        "yRot": yRot
+      });
+    } else {
+      db.set({
+        "room_ID": "n/a",
+        "xPos": xPos,
+        "yPos": yPos,
+        "xRot": xRot,
+        "yRot": yRot
+      });
+    }
+  }
+
+  //Remove furniture
+  static void removeFurniture(String uuid, String id, String name) {
+    DatabaseReference db =
+        FirebaseDatabase.instance.ref("Furniture/$uuid/$name/$id");
+
+    db.remove();
   }
 
   //Fetch furnitures based on userID
   static Future<String> fetchFurnitures(String uuid) async {
-    DatabaseReference db = FirebaseDatabase.instance.ref("Furniture/" + uuid);
+    DatabaseReference db = FirebaseDatabase.instance.ref("Furniture/$uuid");
 
     final snapshot = await db.get();
 

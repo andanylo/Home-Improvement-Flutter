@@ -17,6 +17,14 @@ class FurnitureTemplateWidget extends StatelessWidget {
           borderRadius: BorderRadius.all(Radius.circular(15)),
           color: Colors.blue),
       child: Column(children: [
+        Padding(
+          padding: EdgeInsets.only(top: 10),
+          child: SizedBox(
+            width: 100,
+            height: 100,
+            child: Image.asset("assets/images/" + template.imageName + ".png"),
+          ),
+        ),
         Spacer(),
         Padding(
           padding: EdgeInsets.only(bottom: 10),

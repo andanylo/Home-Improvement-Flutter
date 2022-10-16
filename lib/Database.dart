@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:firebase_database/firebase_database.dart';
 import 'package:home_improvement/FurnitureTemplate.dart';
+import 'package:home_improvement/RoomTemplate.dart';
 import 'package:home_improvement/User.dart';
 
 class Database {
@@ -70,8 +71,21 @@ class Database {
     return "";
   }
 
+  //Fetch rooms based on userID
+  static Future<String> fetchRooms(String uuid) async {
+    DatabaseReference db = FirebaseDatabase.instance.ref("Rooms/$uuid");
+
+    final snapshot = await db.get();
+
+    if (snapshot.exists) {
+      String value = jsonEncode(snapshot.value);
+      return value;
+    }
+    return "";
+  }
+
   //Fetches furniture templates from firebase database, else throw an error
-  static Future<List<FurnitureTemplate>> fetchTemplates() async {
+  static Future<List<FurnitureTemplate>> fetchFurnitureTemplates() async {
     //Get reference of the database
     DatabaseReference db = FirebaseDatabase.instance.ref();
 
@@ -93,6 +107,41 @@ class Database {
           //Get value for key imageName
           else if (value.key == "imageName") {
             template.imageName = value.value as String;
+          }
+        });
+
+        templates.add(template);
+      });
+      return templates;
+    } else {
+      print("Can't find snapshot");
+    }
+    return [];
+  }
+
+  //Fetches room templates from firebase database, else throw an error
+  static Future<List<RoomTemplate>> fetchRoomTempaltes() async {
+    //Get reference of the database
+    DatabaseReference db = FirebaseDatabase.instance.ref();
+
+    //Get snapshot of furniture templates
+    final snapshot = await db.child("RoomTemplates").get();
+
+    //Fetch each room and map them into custom objects
+    if (snapshot.exists) {
+      List<RoomTemplate> templates = [];
+      snapshot.children.forEach((furniture) {
+        //Get each value inside tempate
+
+        RoomTemplate template = RoomTemplate();
+        furniture.children.forEach((value) {
+          //Get value for key name
+          if (value.key == "key_word") {
+            template.key_word = value.value as String;
+          }
+          //Get value for key imageName
+          else if (value.key == "roomName") {
+            template.roomName = value.value as String;
           }
         });
 

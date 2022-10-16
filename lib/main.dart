@@ -10,8 +10,12 @@ import 'package:home_improvement/FurnitureListPopUp.dart';
 import 'package:home_improvement/LoginPage.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:home_improvement/RoomListPopUp.dart';
 import 'FurnitureTemplate.dart';
+import 'RoomTemplate.dart';
 import 'firebase_options.dart';
+
+enum EditingMode { room, furniture }
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,6 +40,8 @@ class _UnityDemoScreenState extends State<UnityDemoScreen> {
   FurnitureListPopUpController furnitureListPopUpController =
       FurnitureListPopUpController();
 
+  RoomListPopUpController roomListPopUpController = RoomListPopUpController();
+
   static final GlobalKey<ScaffoldState> _scaffoldKey =
       GlobalKey<ScaffoldState>();
   late UnityWidgetController _unityWidgetController;
@@ -57,6 +63,8 @@ class _UnityDemoScreenState extends State<UnityDemoScreen> {
   var isFurnitureEditWindowIsEnabled = false;
   var isEditingFurniture = false;
   var shouldDisableAddButton = false;
+
+  EditingMode? currentEditingMode;
 
   String? editingFurnitureName;
   String? editingFurnitureID;
@@ -84,16 +92,60 @@ class _UnityDemoScreenState extends State<UnityDemoScreen> {
             Padding(
               padding: const EdgeInsets.only(right: 20),
               child: GestureDetector(
-                onTap: () {},
+                onTapDown: (details) => {
+                  //Show account actions
+                  showMenuOptions(details, context)
+                },
                 child: const Icon(Icons.account_circle_outlined),
               ),
-            )
+            ),
           ],
         ),
         body: Stack(
           children:
               this.isEditing ? setUpEditingWindow() : disableEditingWindow(),
         ));
+  }
+
+  Future<void> _signOut() async {
+    await FirebaseAuth.instance.signOut();
+  }
+
+  Future<void> showMenuOptions(
+      TapDownDetails details, BuildContext context) async {
+    int? selectedValue = await showMenu(
+      context: context,
+      position: RelativeRect.fromLTRB(
+          details.globalPosition.dx, details.globalPosition.dy, 0, 0),
+      elevation: 2,
+      items: [
+        PopupMenuItem(
+            value: 1,
+            child: Row(
+              children: const [
+                Icon(Icons.edit),
+                SizedBox(
+                  width: 10,
+                ),
+                Text("Edit account info")
+              ],
+            )),
+        PopupMenuItem(
+            value: 2,
+            child: Row(
+              children: const [
+                Icon(Icons.logout),
+                SizedBox(
+                  width: 10,
+                ),
+                Text("Logout")
+              ],
+            ))
+      ],
+    );
+    if (selectedValue == 2) {
+      _signOut();
+    }
   }
 
   //Get unity widget and crete if needed
@@ -121,10 +173,19 @@ class _UnityDemoScreenState extends State<UnityDemoScreen> {
     FirebaseAuth.instance.authStateChanges().listen((User? user) async {
       //Fetch furnitures
       String jsonFurnitures = await Database.fetchFurnitures(user!.uid);
-      print(jsonFurnitures);
       //Add furnitures to unity
       this._unityWidgetController.postMessage(
           'FurnitureAdder', 'recieveFurnituresFromDatabase', jsonFurnitures);
+    });
+  }
+
+  void fetchRoom() {
+    FirebaseAuth.instance.authStateChanges().listen((User? user) async {
+      String jsonRooms = await Database.fetchRooms(user!.uid);
+
+      this
+          ._unityWidgetController
+          .postMessage('RoomAdder', 'recieveRoomsFromDatabase', jsonRooms);
     });
   }
 
@@ -150,6 +211,7 @@ class _UnityDemoScreenState extends State<UnityDemoScreen> {
               : FirebaseAuth.instance.currentUser!.uid),
           mes,
           true);
+    } else if (key == 'saveRoom') {
     } else if (key == 'inside') {
       setState(() {
         this.shouldDisableAddButton = !(mes.toLowerCase() == 'true');
@@ -162,6 +224,8 @@ class _UnityDemoScreenState extends State<UnityDemoScreen> {
 
       this.isEditingFurniture = true;
       this.setFurnitureEditingState(true);
+    } else if (key == 'presentRoomPopUp') {
+      roomListPopUpController.updateState(true);
     }
   }
 
@@ -169,6 +233,7 @@ class _UnityDemoScreenState extends State<UnityDemoScreen> {
   void setIsEditing() {
     bool editing = !this.isEditing;
     furnitureListPopUpController.selectedTemplate = null;
+    roomListPopUpController.selectedTemplate = null;
     _unityWidgetController.postMessage(
         'UIManager', 'changeEditingStatus', '$editing');
     if (editing == false) {
@@ -181,8 +246,10 @@ class _UnityDemoScreenState extends State<UnityDemoScreen> {
 
   //Set current selected template options
   void setFurnitureEditingState(bool shouldEdit) {
+    currentEditingMode = EditingMode.furniture;
     if (!shouldEdit) {
       this.isEditingFurniture = false;
+      this.currentEditingMode = null;
     }
     isFurnitureEditWindowIsEnabled = shouldEdit;
 
@@ -302,23 +369,29 @@ class _UnityDemoScreenState extends State<UnityDemoScreen> {
                   : createEditFurnitureButtons())
               : createPlusButton()),
       Align(
-        alignment: Alignment.bottomCenter,
-        child: FurnitureListPopUp(
-          controller: furnitureListPopUpController,
-          onTemplateSelect: (FurnitureTemplate template) {
-            //Assign selected template and hide list popup
+          alignment: Alignment.bottomCenter,
+          child: Stack(
+            children: [
+              FurnitureListPopUp(
+                controller: furnitureListPopUpController,
+                onTemplateSelect: (FurnitureTemplate template) {
+                  //Assign selected template and hide list popup
 
-            _unityWidgetController
-                .postJsonMessage('UIManager', 'addNewFurniture', {
-              'furnitureName': template.furnitureName,
-              'furnitureImage': template.imageName,
-            });
+                  _unityWidgetController
+                      .postJsonMessage('UIManager', 'addNewFurniture', {
+                    'furnitureName': template.furnitureName,
+                    'furnitureImage': template.imageName,
+                  });
 
-            setFurnitureEditingState(true);
-            furnitureListPopUpController.updateState(false);
-          },
-        ),
-      ),
+                  setFurnitureEditingState(true);
+                  furnitureListPopUpController.updateState(false);
+                },
+              ),
+              RoomListPopUp(
+                  controller: roomListPopUpController,
+                  onTemplateSelect: (RoomTemplate template) {})
+            ],
+          )),
     ];
   }
 

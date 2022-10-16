@@ -2,39 +2,38 @@ import 'package:flutter/material.dart';
 import 'package:home_improvement/Database.dart';
 import 'package:provider/provider.dart';
 
-import 'FurnitureTemplate.dart';
+import 'RoomTemplate.dart';
 
 //Controller with notifier
-class FurnitureListPopUpController with ChangeNotifier {
+class RoomListPopUpController with ChangeNotifier {
   bool isShow = false;
-  FurnitureTemplate? selectedTemplate;
+  RoomTemplate? selectedTemplate;
 
-  List<FurnitureTemplate> templates = [];
+  List<RoomTemplate> templates = [];
   void updateState(bool newState) {
     isShow = newState;
     notifyListeners();
   }
 
-  void updateTemplates(List<FurnitureTemplate> templates) {
+  void updateTemplates(List<RoomTemplate> templates) {
     this.templates = templates;
     notifyListeners();
   }
 }
 
-class FurnitureListPopUp extends StatefulWidget {
-  final FurnitureListPopUpController controller;
+class RoomListPopUp extends StatefulWidget {
+  final RoomListPopUpController controller;
 
   //Function to return a selected template
-  final void Function(FurnitureTemplate) onTemplateSelect;
+  final void Function(RoomTemplate) onTemplateSelect;
 
-  FurnitureListPopUp(
-      {required this.controller, required this.onTemplateSelect});
+  RoomListPopUp({required this.controller, required this.onTemplateSelect});
 
-  _FurnitureListPopUp createState() => _FurnitureListPopUp();
+  _RoomListPopUp createState() => _RoomListPopUp();
 }
 
 //Catch notifications with widget and reload if needed
-class _FurnitureListPopUp extends State<FurnitureListPopUp> {
+class _RoomListPopUp extends State<RoomListPopUp> {
   @override
   void initState() {
     widget.controller.addListener(() {
@@ -47,8 +46,7 @@ class _FurnitureListPopUp extends State<FurnitureListPopUp> {
 
   //Get templates and update controller
   Future<void> getTemplatesFromDatabase() async {
-    List<FurnitureTemplate> templates =
-        await Database.fetchFurnitureTemplates();
+    List<RoomTemplate> templates = await Database.fetchRoomTempaltes();
     widget.controller.updateTemplates(templates);
   }
 
@@ -67,7 +65,7 @@ class _FurnitureListPopUp extends State<FurnitureListPopUp> {
                     child: Padding(
                       padding: EdgeInsets.only(top: 15),
                       child: Text(
-                        "Add a furniture",
+                        "Add a room",
                         style: TextStyle(
                             fontWeight: FontWeight.bold, fontSize: 20),
                       ),
@@ -96,12 +94,12 @@ class _FurnitureListPopUp extends State<FurnitureListPopUp> {
                         mainAxisSpacing: 5,
                         children: List.generate(
                             widget.controller.templates.length, (index) {
-                          FurnitureTemplate template =
+                          RoomTemplate template =
                               widget.controller.templates[index];
 
                           return GestureDetector(
                               onTap: () => widget.onTemplateSelect(template),
-                              child: FurnitureTemplateWidget(
+                              child: RoomTemplateWidget(
                                 template: template,
                               ));
                         }),

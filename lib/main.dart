@@ -58,11 +58,10 @@ class _UnityDemoScreenState extends State<UnityDemoScreen> {
   }
 
   var isEditing = false;
-  var shouldHideFurnitureControls = false;
+  var shouldHideControls = false;
 
-  var isFurnitureEditWindowIsEnabled = false;
-  var isEditingFurniture = false;
   var shouldDisableAddButton = false;
+  var isEditingObject = false;
 
   EditingMode? currentEditingMode;
 
@@ -164,9 +163,10 @@ class _UnityDemoScreenState extends State<UnityDemoScreen> {
 
   // Callback that connects the created controller to the unity controller
   void onUnityCreated(controller) {
-    this._unityWidgetController = controller;
+    _unityWidgetController = controller;
 
     fetchFurniture();
+    fetchRoom();
   }
 
   void fetchFurniture() {
@@ -174,7 +174,7 @@ class _UnityDemoScreenState extends State<UnityDemoScreen> {
       //Fetch furnitures
       String jsonFurnitures = await Database.fetchFurnitures(user!.uid);
       //Add furnitures to unity
-      this._unityWidgetController.postMessage(
+      _unityWidgetController.postMessage(
           'FurnitureAdder', 'recieveFurnituresFromDatabase', jsonFurnitures);
     });
   }
@@ -183,9 +183,8 @@ class _UnityDemoScreenState extends State<UnityDemoScreen> {
     FirebaseAuth.instance.authStateChanges().listen((User? user) async {
       String jsonRooms = await Database.fetchRooms(user!.uid);
 
-      this
-          ._unityWidgetController
-          .postMessage('RoomAdder', 'recieveRoomsFromDatabase', jsonRooms);
+      _unityWidgetController.postMessage(
+          'RoomAdder', 'recieveRoomsFromDatabase', jsonRooms);
     });
   }
 
@@ -195,7 +194,7 @@ class _UnityDemoScreenState extends State<UnityDemoScreen> {
     mes = mes.substring(mes.indexOf(':') + 1, mes.length);
 
     if (key == 'movement') {
-      this.shouldHideFurnitureControls = mes.toLowerCase() == 'true';
+      shouldHideControls = mes.toLowerCase() == 'true';
       setState(() {});
     } else if (key == 'saveFurniture') {
       Database.saveFurniture(
@@ -212,6 +211,20 @@ class _UnityDemoScreenState extends State<UnityDemoScreen> {
           mes,
           true);
     } else if (key == 'saveRoom') {
+      Database.saveRoom(
+          (FirebaseAuth.instance.currentUser == null
+              ? ""
+              : FirebaseAuth.instance.currentUser!.uid),
+          mes,
+          false);
+      print(mes);
+    } else if (key == 'updateRoom') {
+      Database.saveRoom(
+          (FirebaseAuth.instance.currentUser == null
+              ? ""
+              : FirebaseAuth.instance.currentUser!.uid),
+          mes,
+          true);
     } else if (key == 'inside') {
       setState(() {
         this.shouldDisableAddButton = !(mes.toLowerCase() == 'true');
@@ -222,8 +235,8 @@ class _UnityDemoScreenState extends State<UnityDemoScreen> {
       editingFurnitureName = furnitureData['name'];
       editingFurnitureID = furnitureData['id'];
 
-      this.isEditingFurniture = true;
-      this.setFurnitureEditingState(true);
+      isEditingObject = true;
+      setEditingMode(true, EditingMode.furniture);
     } else if (key == 'presentRoomPopUp') {
       roomListPopUpController.updateState(true);
     }
@@ -244,14 +257,11 @@ class _UnityDemoScreenState extends State<UnityDemoScreen> {
     });
   }
 
-  //Set current selected template options
-  void setFurnitureEditingState(bool shouldEdit) {
-    currentEditingMode = EditingMode.furniture;
+  void setEditingMode(bool shouldEdit, EditingMode? editingMode) {
+    currentEditingMode = editingMode;
     if (!shouldEdit) {
-      this.isEditingFurniture = false;
-      this.currentEditingMode = null;
+      isEditingObject = false;
     }
-    isFurnitureEditWindowIsEnabled = shouldEdit;
 
     setState(() {});
   }
@@ -281,7 +291,12 @@ class _UnityDemoScreenState extends State<UnityDemoScreen> {
     this.editingFurnitureName = null;
     _unityWidgetController.postMessage(
         'UIManager', 'cancelFurnitureEditing', '');
-    setFurnitureEditingState(false);
+    setEditingMode(false, null);
+  }
+
+  void cancelRoomEditing() {
+    _unityWidgetController.postMessage('UIManager', 'cancelRoomEditing', '');
+    setEditingMode(false, null);
   }
 
   void deleteFurniture() {
@@ -298,6 +313,38 @@ class _UnityDemoScreenState extends State<UnityDemoScreen> {
     cancelFurnitureEditing();
   }
 
+  //Create edit room buttons
+  Widget createEditRoomButtons() {
+    return SafeArea(
+        bottom: true,
+        child: Container(
+          margin: EdgeInsets.only(bottom: 30),
+          width: 340,
+          child: Row(
+            children: [
+              EditButton(
+                icon: const Icon(
+                  Icons.cancel,
+                  size: 40,
+                ),
+                pressed: () {
+                  cancelRoomEditing();
+                },
+                foregroundColor: Colors.red,
+              ),
+              const Spacer(),
+              EditButton(
+                  icon: const Icon(Icons.check, size: 40),
+                  pressed: () {
+                    _unityWidgetController.postMessage(
+                        'UIManager', 'saveRoom', '');
+                    setEditingMode(false, null);
+                  })
+            ],
+          ),
+        ));
+  }
+
   //Create edit furniture buttons
   Widget createEditFurnitureButtons() {
     return SafeArea(
@@ -307,7 +354,7 @@ class _UnityDemoScreenState extends State<UnityDemoScreen> {
           width: 340,
           child: Row(
             children: [
-              FurnitureEditButton(
+              EditButton(
                 icon: const Icon(
                   Icons.cancel,
                   size: 40,
@@ -318,8 +365,8 @@ class _UnityDemoScreenState extends State<UnityDemoScreen> {
                 foregroundColor: Colors.red,
               ),
               const Spacer(),
-              (this.isEditingFurniture
-                  ? FurnitureEditButton(
+              (isEditingObject
+                  ? EditButton(
                       icon: const Icon(Icons.delete, size: 40),
                       pressed: () {
                         deleteFurniture();
@@ -327,8 +374,8 @@ class _UnityDemoScreenState extends State<UnityDemoScreen> {
                       foregroundColor: Colors.red,
                     )
                   : SizedBox.shrink()),
-              this.isEditingFurniture ? const Spacer() : SizedBox.shrink(),
-              FurnitureEditButton(
+              isEditingObject ? const Spacer() : SizedBox.shrink(),
+              EditButton(
                 pressed: () {
                   _unityWidgetController.postMessage(
                       'UIManager', 'rotateBy90Degrees', 'zxcxz');
@@ -339,11 +386,11 @@ class _UnityDemoScreenState extends State<UnityDemoScreen> {
                 ),
               ),
               const Spacer(),
-              FurnitureEditButton(
+              EditButton(
                 pressed: () {
                   _unityWidgetController.postMessage(
                       'UIManager', 'saveFurniture', '');
-                  setFurnitureEditingState(false);
+                  setEditingMode(false, null);
                 },
                 icon: const Icon(
                   Icons.check,
@@ -360,17 +407,16 @@ class _UnityDemoScreenState extends State<UnityDemoScreen> {
   List<Widget> setUpEditingWindow() {
     Widget unity = returnUnityWidget();
     return [
+      //Game
       unity,
-      Align(
-          alignment: Alignment.bottomCenter,
-          child: (this.isFurnitureEditWindowIsEnabled == true)
-              ? (this.shouldHideFurnitureControls
-                  ? null
-                  : createEditFurnitureButtons())
-              : createPlusButton()),
+      //Controls
+      Align(alignment: Alignment.bottomCenter, child: getControls()),
+
+      //Presenter
       Align(
           alignment: Alignment.bottomCenter,
           child: Stack(
+            alignment: Alignment.bottomCenter,
             children: [
               FurnitureListPopUp(
                 controller: furnitureListPopUpController,
@@ -383,13 +429,19 @@ class _UnityDemoScreenState extends State<UnityDemoScreen> {
                     'furnitureImage': template.imageName,
                   });
 
-                  setFurnitureEditingState(true);
+                  setEditingMode(true, EditingMode.furniture);
                   furnitureListPopUpController.updateState(false);
                 },
               ),
               RoomListPopUp(
                   controller: roomListPopUpController,
-                  onTemplateSelect: (RoomTemplate template) {})
+                  onTemplateSelect: (RoomTemplate template) {
+                    _unityWidgetController.postJsonMessage('UIManager',
+                        'addRoom', {'key_word': template.key_word});
+
+                    setEditingMode(true, EditingMode.room);
+                    roomListPopUpController.updateState(false);
+                  })
             ],
           )),
     ];
@@ -398,6 +450,19 @@ class _UnityDemoScreenState extends State<UnityDemoScreen> {
   List<Widget> disableEditingWindow() {
     Widget unity = returnUnityWidget();
     return [unity];
+  }
+
+  //Returns controls based on editing mode
+  Widget? getControls() {
+    if (currentEditingMode == null) {
+      return createPlusButton();
+    }
+    switch (currentEditingMode!) {
+      case EditingMode.room:
+        return createEditRoomButtons();
+      case EditingMode.furniture:
+        return shouldHideControls ? null : createEditFurnitureButtons();
+    }
   }
 
   void onUnitySceneLoaded(SceneLoaded? scene) {

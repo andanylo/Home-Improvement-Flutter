@@ -50,6 +50,41 @@ class Database {
     }
   }
 
+  //Save room to user
+  static void saveRoom(String uuid, String jsonObject, bool isUpdating) {
+    Map<String, dynamic> roomData = jsonDecode(jsonObject);
+
+    String roomName = roomData['key_word'];
+    String roomId = roomData['id'];
+
+    double xPos = roomData['xPos'];
+    double yPos = roomData['yPos'];
+
+    double xRot = roomData['xRot'];
+    double yRot = roomData['yRot'];
+
+    List<dynamic> connections = roomData['connections'];
+    DatabaseReference db =
+        FirebaseDatabase.instance.ref("Rooms/$uuid/$roomName/$roomId");
+    if (isUpdating) {
+      db.update({
+        "xPos": xPos,
+        "yPos": yPos,
+        "xRot": xRot,
+        "yRot": yRot,
+        "connections": connections
+      });
+    } else {
+      db.set({
+        "xPos": xPos,
+        "yPos": yPos,
+        "xRot": xRot,
+        "yRot": yRot,
+        "connections": connections
+      });
+    }
+  }
+
   //Remove furniture
   static void removeFurniture(String uuid, String id, String name) {
     DatabaseReference db =

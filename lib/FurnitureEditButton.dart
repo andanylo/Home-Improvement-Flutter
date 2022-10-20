@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
-class FurnitureEditButton extends StatelessWidget {
+class EditButton extends StatelessWidget {
   Icon icon;
   VoidCallback pressed;
   Color? foregroundColor;
   bool? isDisabled = false;
-  FurnitureEditButton(
+  EditButton(
       {required this.icon,
       required this.pressed,
       this.foregroundColor,

@@ -36,11 +36,18 @@ class UnityDemoScreen extends StatefulWidget {
   _UnityDemoScreenState createState() => _UnityDemoScreenState();
 }
 
-class _UnityDemoScreenState extends State<UnityDemoScreen> {
+class _UnityDemoScreenState extends State<UnityDemoScreen>
+    with SingleTickerProviderStateMixin {
   FurnitureListPopUpController furnitureListPopUpController =
       FurnitureListPopUpController();
 
   RoomListPopUpController roomListPopUpController = RoomListPopUpController();
+
+  dynamic currentPopUpController;
+
+  late AnimationController _controller;
+  late Animation<Offset> _offsetAnimation;
+  late Animation<double> _fadeAnimation;
 
   static final GlobalKey<ScaffoldState> _scaffoldKey =
       GlobalKey<ScaffoldState>();
@@ -49,10 +56,49 @@ class _UnityDemoScreenState extends State<UnityDemoScreen> {
   @override
   void initState() {
     super.initState();
+
+    //Set animation controllers
+
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 250),
+      vsync: this,
+    );
+
+    _offsetAnimation = Tween<Offset>(
+      begin: const Offset(0, 1),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOut,
+    ))
+      ..addStatusListener((status) {
+        if (status == AnimationStatus.forward) {
+          // Start animation at begin
+
+          if (currentPopUpController is FurnitureListPopUpController) {
+            furnitureListPopUpController.updateState(true);
+            print(currentPopUpController);
+          } else if (currentPopUpController is RoomListPopUpController) {
+            roomListPopUpController.updateState(true);
+          }
+        } else if (status == AnimationStatus.dismissed) {
+          // To hide widget, we need complete animation first
+          roomListPopUpController.updateState(false);
+          furnitureListPopUpController.updateState(false);
+          // if (currentPopUpController is FurnitureListPopUpController) {
+          //   (currentPopUpController as FurnitureListPopUpController)
+          //       .updateState(false);
+          // } else if (currentPopUpController is RoomListPopUpController) {
+          //   (currentPopUpController as RoomListPopUpController)
+          //       .updateState(false);
+          // }
+        }
+      });
   }
 
   @override
   void dispose() {
+    _controller.dispose();
     _unityWidgetController.dispose();
     super.dispose();
   }
@@ -229,6 +275,10 @@ class _UnityDemoScreenState extends State<UnityDemoScreen> {
       setState(() {
         this.shouldDisableAddButton = !(mes.toLowerCase() == 'true');
       });
+    } else if (key == 'intersectsWithOtherRooms') {
+      setState(() {
+        this.shouldDisableAddButton = mes.toLowerCase() == 'true';
+      });
     } else if (key == 'enableFurnitureEditing') {
       Map<String, dynamic> furnitureData = jsonDecode(mes);
 
@@ -238,7 +288,11 @@ class _UnityDemoScreenState extends State<UnityDemoScreen> {
       isEditingObject = true;
       setEditingMode(true, EditingMode.furniture);
     } else if (key == 'presentRoomPopUp') {
-      roomListPopUpController.updateState(true);
+      currentPopUpController = roomListPopUpController;
+      if (_controller.isDismissed) {
+        _controller.forward();
+      }
+      //roomListPopUpController.updateState(true);
     }
   }
 
@@ -274,8 +328,10 @@ class _UnityDemoScreenState extends State<UnityDemoScreen> {
           margin: EdgeInsets.only(bottom: 30),
           child: ElevatedButton(
             onPressed: () {
-              furnitureListPopUpController
-                  .updateState(!furnitureListPopUpController.isShow);
+              currentPopUpController = furnitureListPopUpController;
+              if (_controller.isDismissed) {
+                _controller.forward();
+              }
             },
             style: ElevatedButton.styleFrom(
               shape: CircleBorder(),
@@ -289,6 +345,7 @@ class _UnityDemoScreenState extends State<UnityDemoScreen> {
   void cancelFurnitureEditing() {
     this.editingFurnitureID = null;
     this.editingFurnitureName = null;
+    shouldDisableAddButton = false;
     _unityWidgetController.postMessage(
         'UIManager', 'cancelFurnitureEditing', '');
     setEditingMode(false, null);
@@ -296,6 +353,7 @@ class _UnityDemoScreenState extends State<UnityDemoScreen> {
 
   void cancelRoomEditing() {
     _unityWidgetController.postMessage('UIManager', 'cancelRoomEditing', '');
+    shouldDisableAddButton = false;
     setEditingMode(false, null);
   }
 
@@ -334,12 +392,25 @@ class _UnityDemoScreenState extends State<UnityDemoScreen> {
               ),
               const Spacer(),
               EditButton(
-                  icon: const Icon(Icons.check, size: 40),
-                  pressed: () {
-                    _unityWidgetController.postMessage(
-                        'UIManager', 'saveRoom', '');
-                    setEditingMode(false, null);
-                  })
+                pressed: () {
+                  _unityWidgetController.postMessage(
+                      'UIManager', 'rotateRoom', '');
+                },
+                icon: const Icon(
+                  Icons.rotate_right,
+                  size: 40,
+                ),
+              ),
+              const Spacer(),
+              EditButton(
+                icon: const Icon(Icons.check, size: 40),
+                pressed: () {
+                  _unityWidgetController.postMessage(
+                      'UIManager', 'saveRoom', '');
+                  setEditingMode(false, null);
+                },
+                isDisabled: shouldDisableAddButton,
+              )
             ],
           ),
         ));
@@ -378,10 +449,10 @@ class _UnityDemoScreenState extends State<UnityDemoScreen> {
               EditButton(
                 pressed: () {
                   _unityWidgetController.postMessage(
-                      'UIManager', 'rotateBy90Degrees', 'zxcxz');
+                      'UIManager', 'rotateFurniture', '');
                 },
                 icon: const Icon(
-                  Icons.rotate_left,
+                  Icons.rotate_right,
                   size: 40,
                 ),
               ),
@@ -418,30 +489,43 @@ class _UnityDemoScreenState extends State<UnityDemoScreen> {
           child: Stack(
             alignment: Alignment.bottomCenter,
             children: [
-              FurnitureListPopUp(
-                controller: furnitureListPopUpController,
-                onTemplateSelect: (FurnitureTemplate template) {
-                  //Assign selected template and hide list popup
+              SlideTransition(
+                position: _offsetAnimation,
+                child: FurnitureListPopUp(
+                  controller: furnitureListPopUpController,
+                  onTemplateSelect: (FurnitureTemplate? template) {
+                    _controller.reverse();
+                    currentPopUpController = null;
+                    if (template == null) {
+                      return;
+                    }
+                    //Assign selected template and hide list popup
+                    _unityWidgetController
+                        .postJsonMessage('UIManager', 'addNewFurniture', {
+                      'furnitureName': template.furnitureName,
+                      'furnitureImage': template.imageName,
+                    });
 
-                  _unityWidgetController
-                      .postJsonMessage('UIManager', 'addNewFurniture', {
-                    'furnitureName': template.furnitureName,
-                    'furnitureImage': template.imageName,
-                  });
-
-                  setEditingMode(true, EditingMode.furniture);
-                  furnitureListPopUpController.updateState(false);
-                },
+                    setEditingMode(true, EditingMode.furniture);
+                  },
+                ),
               ),
-              RoomListPopUp(
-                  controller: roomListPopUpController,
-                  onTemplateSelect: (RoomTemplate template) {
-                    _unityWidgetController.postJsonMessage('UIManager',
-                        'addRoom', {'key_word': template.key_word});
+              SlideTransition(
+                  position: _offsetAnimation,
+                  child: RoomListPopUp(
+                      controller: roomListPopUpController,
+                      onTemplateSelect: (RoomTemplate? template) {
+                        //If canceled
+                        _controller.reverse();
+                        currentPopUpController = null;
+                        if (template == null) {
+                          return;
+                        }
+                        _unityWidgetController.postJsonMessage('UIManager',
+                            'addRoom', {'key_word': template.key_word});
 
-                    setEditingMode(true, EditingMode.room);
-                    roomListPopUpController.updateState(false);
-                  })
+                        setEditingMode(true, EditingMode.room);
+                      })),
             ],
           )),
     ];

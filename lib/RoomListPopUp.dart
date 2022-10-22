@@ -25,7 +25,7 @@ class RoomListPopUp extends StatefulWidget {
   final RoomListPopUpController controller;
 
   //Function to return a selected template
-  final void Function(RoomTemplate) onTemplateSelect;
+  final void Function(RoomTemplate?) onTemplateSelect;
 
   RoomListPopUp({required this.controller, required this.onTemplateSelect});
 
@@ -77,8 +77,9 @@ class _RoomListPopUp extends State<RoomListPopUp> {
                         padding: EdgeInsets.all(5),
                         child: TextButton(
                             onPressed: () {
-                              widget.controller
-                                  .updateState(!widget.controller.isShow);
+                              widget.onTemplateSelect(null);
+                              //widget.controller
+                              //    .updateState(!widget.controller.isShow);
                             },
                             child: Text("Cancel"))),
                   ),

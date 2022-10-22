@@ -25,7 +25,7 @@ class FurnitureListPopUp extends StatefulWidget {
   final FurnitureListPopUpController controller;
 
   //Function to return a selected template
-  final void Function(FurnitureTemplate) onTemplateSelect;
+  final void Function(FurnitureTemplate?) onTemplateSelect;
 
   FurnitureListPopUp(
       {required this.controller, required this.onTemplateSelect});
@@ -79,8 +79,9 @@ class _FurnitureListPopUp extends State<FurnitureListPopUp> {
                         padding: EdgeInsets.all(5),
                         child: TextButton(
                             onPressed: () {
-                              widget.controller
-                                  .updateState(!widget.controller.isShow);
+                              widget.onTemplateSelect(null);
+                              //widget.controller
+                              //  .updateState(!widget.controller.isShow);
                             },
                             child: Text("Cancel"))),
                   ),

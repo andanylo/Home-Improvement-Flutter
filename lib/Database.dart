@@ -85,6 +85,36 @@ class Database {
     }
   }
 
+  //Save player tasks
+  static void savePlayerTask(String uuid, String jsonObject, bool isUpdating) {
+    Map<String, dynamic> playerTask = jsonDecode(jsonObject);
+
+    String furnitureID = playerTask['furnitureID'];
+    String delayTime = playerTask['DelayTime'];
+
+    int award = playerTask['award'];
+    String checkUpStatus = playerTask['checkUpStatus'];
+
+    bool complete_Status = playerTask['complete_Status'];
+    DatabaseReference db =
+        FirebaseDatabase.instance.ref("PlayerTasks/$uuid/$furnitureID");
+    if (isUpdating) {
+      db.update({
+        "DelayTime": delayTime,
+        "award": award,
+        "checkUpStatus": checkUpStatus,
+        "complete_Status": complete_Status
+      });
+    } else {
+      db.set({
+        "DelayTime": delayTime,
+        "award": award,
+        "checkUpStatus": checkUpStatus,
+        "complete_Status": complete_Status
+      });
+    }
+  }
+
   //Remove furniture
   static void removeFurniture(String uuid, String id, String name) {
     DatabaseReference db =
@@ -96,6 +126,13 @@ class Database {
   static void removeRoom(String uuid, String id, String name) {
     DatabaseReference db =
         FirebaseDatabase.instance.ref("Rooms/$uuid/$name/$id");
+
+    db.remove();
+  }
+
+  static void removePlayerTask(String uuid, String furnitureID) {
+    DatabaseReference db =
+        FirebaseDatabase.instance.ref("PlayerTasks/$uuid/$furnitureID");
 
     db.remove();
   }
@@ -119,6 +156,28 @@ class Database {
 
     final snapshot = await db.get();
 
+    if (snapshot.exists) {
+      String value = jsonEncode(snapshot.value);
+      return value;
+    }
+    return "";
+  }
+
+  //Fetch tasks
+  static Future<String> fetchTasks() async {
+    DatabaseReference db = FirebaseDatabase.instance.ref("Task");
+    final snapshot = await db.get();
+    if (snapshot.exists) {
+      String value = jsonEncode(snapshot.value);
+      return value;
+    }
+    return "";
+  }
+
+  //Fetch player tasks
+  static Future<String> fetchPlayerTasks(String uuid) async {
+    DatabaseReference db = FirebaseDatabase.instance.ref("PlayerTasks/$uuid");
+    final snapshot = await db.get();
     if (snapshot.exists) {
       String value = jsonEncode(snapshot.value);
       return value;

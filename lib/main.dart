@@ -239,7 +239,7 @@ class _UnityDemoScreenState extends State<UnityDemoScreen>
     });
   }
 
-  void onUnityMessage(message) {
+  Future<void> onUnityMessage(message) async {
     String mes = message as String;
     String key = mes.substring(0, mes.indexOf(':'));
     mes = mes.substring(mes.indexOf(':') + 1, mes.length);
@@ -320,6 +320,31 @@ class _UnityDemoScreenState extends State<UnityDemoScreen>
         _controller.forward();
       }
       //roomListPopUpController.updateState(true);
+    } else if (key == 'getTasks') {
+      String json = await Database.fetchTasks();
+      print(json);
+      _unityWidgetController.postMessage('UIManager', 'didGetTasks', json);
+    } else if (key == 'getPlayerTasks') {
+      FirebaseAuth.instance.authStateChanges().listen((User? user) async {
+        String json = await Database.fetchPlayerTasks(user!.uid);
+        print(json);
+        _unityWidgetController.postMessage(
+            'UIManager', 'didGetPlayerTasks', json);
+      });
+    } else if (key == 'savePlayerTask') {
+      Database.savePlayerTask(
+          (FirebaseAuth.instance.currentUser == null
+              ? ""
+              : FirebaseAuth.instance.currentUser!.uid),
+          mes,
+          false);
+    } else if (key == 'updatePlayerTask') {
+      Database.savePlayerTask(
+          (FirebaseAuth.instance.currentUser == null
+              ? ""
+              : FirebaseAuth.instance.currentUser!.uid),
+          mes,
+          true);
     }
   }
 

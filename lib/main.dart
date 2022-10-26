@@ -114,6 +114,11 @@ class _UnityDemoScreenState extends State<UnityDemoScreen>
   String? editingFurnitureName;
   String? editingFurnitureID;
 
+  String? editingRoomKeyWord;
+  String? editingRoomID;
+
+  bool? roomCanBeEdited = null;
+
   Widget? unityWidget;
 
   Widget build(BuildContext context) {
@@ -256,21 +261,34 @@ class _UnityDemoScreenState extends State<UnityDemoScreen>
               : FirebaseAuth.instance.currentUser!.uid),
           mes,
           true);
+    } else if (key == 'deleteFurniture') {
+      Map<String, dynamic> furnitureData = jsonDecode(mes);
+      FirebaseAuth.instance.authStateChanges().listen((User? user) async {
+        Database.removeFurniture(
+            user!.uid, furnitureData['id'], furnitureData['name']);
+      });
     } else if (key == 'saveRoom') {
-      Database.saveRoom(
-          (FirebaseAuth.instance.currentUser == null
-              ? ""
-              : FirebaseAuth.instance.currentUser!.uid),
-          mes,
-          false);
-      print(mes);
+      if (roomCanBeEdited != false) {
+        Database.saveRoom(
+            (FirebaseAuth.instance.currentUser == null
+                ? ""
+                : FirebaseAuth.instance.currentUser!.uid),
+            mes,
+            false);
+      } else {
+        cancelRoomEditing();
+      }
     } else if (key == 'updateRoom') {
-      Database.saveRoom(
-          (FirebaseAuth.instance.currentUser == null
-              ? ""
-              : FirebaseAuth.instance.currentUser!.uid),
-          mes,
-          true);
+      if (roomCanBeEdited != false) {
+        Database.saveRoom(
+            (FirebaseAuth.instance.currentUser == null
+                ? ""
+                : FirebaseAuth.instance.currentUser!.uid),
+            mes,
+            true);
+      } else {
+        cancelRoomEditing();
+      }
     } else if (key == 'inside') {
       setState(() {
         this.shouldDisableAddButton = !(mes.toLowerCase() == 'true');
@@ -287,6 +305,15 @@ class _UnityDemoScreenState extends State<UnityDemoScreen>
 
       isEditingObject = true;
       setEditingMode(true, EditingMode.furniture);
+    } else if (key == 'enableRoomEditing') {
+      Map<String, dynamic> roomData = jsonDecode(mes);
+
+      editingRoomKeyWord = roomData['key_word'];
+      editingRoomID = roomData['id'];
+      roomCanBeEdited = !(roomData['hasConnections'].toLowerCase() == 'true');
+
+      isEditingObject = true;
+      setEditingMode(true, EditingMode.room);
     } else if (key == 'presentRoomPopUp') {
       currentPopUpController = roomListPopUpController;
       if (_controller.isDismissed) {
@@ -352,6 +379,10 @@ class _UnityDemoScreenState extends State<UnityDemoScreen>
   }
 
   void cancelRoomEditing() {
+    editingRoomID = null;
+    editingFurnitureName = null;
+    roomCanBeEdited = null;
+
     _unityWidgetController.postMessage('UIManager', 'cancelRoomEditing', '');
     shouldDisableAddButton = false;
     setEditingMode(false, null);
@@ -369,6 +400,21 @@ class _UnityDemoScreenState extends State<UnityDemoScreen>
     }
 
     cancelFurnitureEditing();
+  }
+
+  void deleteRoom() {
+    _unityWidgetController.postMessage(
+        'UIManager', 'deleteRoom', editingRoomID);
+
+    if (editingRoomID != null && editingRoomKeyWord != null) {
+      String id = editingRoomID!;
+      String name = editingRoomKeyWord!;
+      FirebaseAuth.instance.authStateChanges().listen((User? user) async {
+        Database.removeRoom(user!.uid, id, name);
+      });
+
+      cancelRoomEditing();
+    }
   }
 
   //Create edit room buttons
@@ -391,6 +437,17 @@ class _UnityDemoScreenState extends State<UnityDemoScreen>
                 foregroundColor: Colors.red,
               ),
               const Spacer(),
+              (isEditingObject
+                  ? EditButton(
+                      icon: const Icon(Icons.delete, size: 40),
+                      pressed: () {
+                        deleteRoom();
+                      },
+                      isDisabled: roomCanBeEdited == false,
+                      foregroundColor: Colors.red,
+                    )
+                  : SizedBox.shrink()),
+              isEditingObject ? const Spacer() : SizedBox.shrink(),
               EditButton(
                 pressed: () {
                   _unityWidgetController.postMessage(
@@ -400,6 +457,7 @@ class _UnityDemoScreenState extends State<UnityDemoScreen>
                   Icons.rotate_right,
                   size: 40,
                 ),
+                isDisabled: roomCanBeEdited == false,
               ),
               const Spacer(),
               EditButton(

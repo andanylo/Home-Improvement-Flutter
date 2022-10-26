@@ -93,6 +93,13 @@ class Database {
     db.remove();
   }
 
+  static void removeRoom(String uuid, String id, String name) {
+    DatabaseReference db =
+        FirebaseDatabase.instance.ref("Rooms/$uuid/$name/$id");
+
+    db.remove();
+  }
+
   //Fetch furnitures based on userID
   static Future<String> fetchFurnitures(String uuid) async {
     DatabaseReference db = FirebaseDatabase.instance.ref("Furniture/$uuid");

@@ -11,6 +11,8 @@ import 'package:home_improvement/LoginPage.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:home_improvement/RoomListPopUp.dart';
+import 'package:home_improvement/TaskPopUp.dart';
+import 'package:home_improvement/TaskValuesPopUp.dart';
 import 'FurnitureTemplate.dart';
 import 'RoomTemplate.dart';
 import 'firebase_options.dart';
@@ -38,6 +40,8 @@ class UnityDemoScreen extends StatefulWidget {
 
 class _UnityDemoScreenState extends State<UnityDemoScreen>
     with SingleTickerProviderStateMixin {
+  final navigatorKey = GlobalKey<NavigatorState>();
+
   FurnitureListPopUpController furnitureListPopUpController =
       FurnitureListPopUpController();
 
@@ -52,6 +56,8 @@ class _UnityDemoScreenState extends State<UnityDemoScreen>
   static final GlobalKey<ScaffoldState> _scaffoldKey =
       GlobalKey<ScaffoldState>();
   late UnityWidgetController _unityWidgetController;
+
+  TaskPopUp? taskPopUp;
 
   @override
   void initState() {
@@ -85,13 +91,6 @@ class _UnityDemoScreenState extends State<UnityDemoScreen>
           // To hide widget, we need complete animation first
           roomListPopUpController.updateState(false);
           furnitureListPopUpController.updateState(false);
-          // if (currentPopUpController is FurnitureListPopUpController) {
-          //   (currentPopUpController as FurnitureListPopUpController)
-          //       .updateState(false);
-          // } else if (currentPopUpController is RoomListPopUpController) {
-          //   (currentPopUpController as RoomListPopUpController)
-          //       .updateState(false);
-          // }
         }
       });
   }
@@ -105,6 +104,7 @@ class _UnityDemoScreenState extends State<UnityDemoScreen>
 
   var isEditing = false;
   var shouldHideControls = false;
+  var shouldShowInteractButton = false;
 
   var shouldDisableAddButton = false;
   var isEditingObject = false;
@@ -117,7 +117,9 @@ class _UnityDemoScreenState extends State<UnityDemoScreen>
   String? editingRoomKeyWord;
   String? editingRoomID;
 
-  bool? roomCanBeEdited = null;
+  bool? roomCanBeEdited;
+
+  String? currentClosestFurniture;
 
   Widget? unityWidget;
 
@@ -152,8 +154,7 @@ class _UnityDemoScreenState extends State<UnityDemoScreen>
           ],
         ),
         body: Stack(
-          children:
-              this.isEditing ? setUpEditingWindow() : disableEditingWindow(),
+          children: isEditing ? setUpEditingWindow() : disableEditingWindow(),
         ));
   }
 
@@ -322,12 +323,10 @@ class _UnityDemoScreenState extends State<UnityDemoScreen>
       //roomListPopUpController.updateState(true);
     } else if (key == 'getTasks') {
       String json = await Database.fetchTasks();
-      print(json);
       _unityWidgetController.postMessage('UIManager', 'didGetTasks', json);
     } else if (key == 'getPlayerTasks') {
       FirebaseAuth.instance.authStateChanges().listen((User? user) async {
         String json = await Database.fetchPlayerTasks(user!.uid);
-        print(json);
         _unityWidgetController.postMessage(
             'UIManager', 'didGetPlayerTasks', json);
       });
@@ -345,6 +344,15 @@ class _UnityDemoScreenState extends State<UnityDemoScreen>
               : FirebaseAuth.instance.currentUser!.uid),
           mes,
           true);
+    } else if (key == 'taskButtonStatus') {
+      bool willShow = mes.toLowerCase() == 'true';
+      if (willShow != shouldShowInteractButton) {
+        setState(() {
+          shouldShowInteractButton = mes.toLowerCase() == 'true';
+        });
+      }
+    } else if (key == 'currentClosestFurniture') {
+      currentClosestFurniture = mes.isEmpty ? null : mes;
     }
   }
 
@@ -421,6 +429,7 @@ class _UnityDemoScreenState extends State<UnityDemoScreen>
       String name = editingFurnitureName!;
       FirebaseAuth.instance.authStateChanges().listen((User? user) async {
         Database.removeFurniture(user!.uid, id, name);
+        Database.removePlayerTask(user!.uid, id);
       });
     }
 
@@ -616,7 +625,11 @@ class _UnityDemoScreenState extends State<UnityDemoScreen>
 
   List<Widget> disableEditingWindow() {
     Widget unity = returnUnityWidget();
-    return [unity];
+
+    taskPopUp = TaskPopUp(shouldShowButton: shouldShowInteractButton);
+    taskPopUp?.currentClosestFurniture = currentClosestFurniture;
+
+    return [unity, taskPopUp ?? Container()];
   }
 
   //Returns controls based on editing mode

@@ -1,8 +1,13 @@
 import 'dart:convert';
 
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:home_improvement/FurnitureTemplate.dart';
 import 'package:home_improvement/RoomTemplate.dart';
+import 'package:home_improvement/TaskValuesPopUp.dart';
+import 'package:home_improvement/Task_Demo.dart';
+import 'package:home_improvement/Task_Info.dart';
+import 'package:home_improvement/Task_Intro.dart';
 import 'package:home_improvement/User.dart';
 
 class Database {
@@ -83,6 +88,110 @@ class Database {
         "connections": connections
       });
     }
+  }
+
+  //Return task values pop up
+  static Future<TaskValuesPopUp?> fetchTaskComponents(
+      String furnitureName) async {
+    DatabaseReference databaseTaskIntro =
+        FirebaseDatabase.instance.ref("Task_Intro/$furnitureName");
+
+    DatabaseReference databaseTaskInfo =
+        FirebaseDatabase.instance.ref("Task_Info/$furnitureName");
+
+    DatabaseReference databaseTaskDemo =
+        FirebaseDatabase.instance.ref("Task_Demo/$furnitureName");
+
+    final introSnapshot = await databaseTaskIntro.get();
+    final infoSnapshot = await databaseTaskInfo.get();
+    final demoSnapshot = await databaseTaskDemo.get();
+
+    TaskIntro? taskIntro;
+    Task_Info? task_info;
+    Task_Demo? task_demo;
+
+    //Get task intro from database
+    if (introSnapshot.exists) {
+      String openingStatement = '';
+      String whenStatement = '';
+      String whyStatement = '';
+      String warningStatement = '';
+      introSnapshot.children.forEach((element) {
+        if (element.key == "Opening_Statement") {
+          openingStatement = element.value as String;
+        } else if (element.key == "Warning_Message") {
+          warningStatement = element.value as String;
+        } else if (element.key == "When_Statement") {
+          whenStatement = element.value as String;
+        } else if (element.key == "Why_Statement") {
+          whyStatement = element.value as String;
+        }
+        taskIntro = TaskIntro(
+            opening_Statement: openingStatement,
+            warning_Statement: warningStatement,
+            when_Statement: whenStatement,
+            why_Statement: whyStatement);
+      });
+    }
+
+    //Get task info
+    if (infoSnapshot.exists) {
+      String time = '';
+      List<String> uWillNeeed = [];
+      infoSnapshot.children.forEach((element) {
+        if (element.key == "Time") {
+          time = element.value as String;
+        } else if (element.key == "UWillNeed") {
+          (element.value as List<Object?>).forEach((items) {
+            if (items != null) {
+              uWillNeeed.add(items as String);
+            }
+          });
+        }
+      });
+
+      task_info = Task_Info(time: time, uWillNeeed: uWillNeeed);
+    }
+
+    //Get task demo
+    if (demoSnapshot.exists) {
+      List<String> images = [];
+      List<String> steps = [];
+
+      demoSnapshot.children.forEach((element) {
+        print(element.value);
+        if (element.key == "Images") {
+          (element.value as List<Object?>).forEach((image) {
+            if (image != null) {
+              images.add(image as String);
+            }
+          });
+        } else if (element.key == "Steps") {
+          print(element.value);
+          (element.value as List<Object?>).forEach((step) {
+            if (step != null) {
+              steps.add(step as String);
+            }
+          });
+        }
+      });
+      print(images);
+      print(steps);
+      task_demo = Task_Demo();
+      task_demo.images = images;
+      task_demo.steps = steps;
+    }
+
+    if (taskIntro != null && task_info != null && task_demo != null) {
+      String title = furnitureName.replaceAll("_", " ");
+      title = title[0].toUpperCase() + title.substring(1);
+      return TaskValuesPopUp(
+          taskInfo: task_info,
+          taskIntro: taskIntro!,
+          task_demo: task_demo,
+          title: title);
+    }
+    return null;
   }
 
   //Save player tasks

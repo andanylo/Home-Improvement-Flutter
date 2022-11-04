@@ -14,6 +14,8 @@ class TaskPopUp extends StatefulWidget {
   String? currentClosestFurniture = null;
   late TaskValuesPopUp taskValues;
 
+  VoidCallback? didCompleteTask;
+
   @override
   State<TaskPopUp> createState() => _TaskPopUp();
 }
@@ -50,9 +52,12 @@ class _TaskPopUp extends State<TaskPopUp> {
                 children: <TextSpan>[
                   TextSpan(
                       text:
-                          'It has come time that you need to ${widget.taskValues.taskIntro.opening_Statement}  \n\n',
+                          'It has come time that you need to ${widget.taskValues.taskIntro.opening_Statement.toLowerCase()}  \n\n',
                       style: const TextStyle(
-                          color: Colors.black, fontFamily: 'Roboto')),
+                          color: Colors.black,
+                          fontFamily: 'Roboto',
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18)),
                   const TextSpan(
                       text: 'Why? \n',
                       style: TextStyle(
@@ -592,7 +597,11 @@ class _TaskPopUp extends State<TaskPopUp> {
                       showDialog(
                           context: context,
                           builder: (BuildContext context) {
-                            return _taskPopup(context);
+                            return StatefulBuilder(
+                              builder: (context, setState) {
+                                return _taskPopup(context, setState);
+                              },
+                            );
                           });
                     }
                   },
@@ -619,12 +628,15 @@ class _TaskPopUp extends State<TaskPopUp> {
     return null;
   }
 
-  Widget _taskPopup(BuildContext context) {
+  bool reachedEnd = false;
+  Widget _taskPopup(
+      BuildContext context, void Function(void Function()) setState) {
     // _currentPage = 0;
     // _pageController.jumpToPage(0);
     var _taskPages = returnTaskPages();
     return Dialog(
-      insetPadding: EdgeInsets.only(top: 40, bottom: 40, left: 10, right: 10),
+      insetPadding:
+          const EdgeInsets.only(top: 40, bottom: 40, left: 10, right: 10),
       child: Scaffold(
         appBar: AppBar(
           title: Text(widget.taskValues.title),
@@ -633,11 +645,15 @@ class _TaskPopUp extends State<TaskPopUp> {
         body: PageView(
           children: _taskPages,
           onPageChanged: (pageNum) {
-            setState(() {
-              _currentPage = pageNum;
+            _currentPage = pageNum;
 
-              if (_currentPage == _taskPages.length - 1) {}
-            });
+            if (_currentPage == _taskPages.length - 1) {
+              reachedEnd = true;
+              print(reachedEnd);
+            } else {
+              reachedEnd = false;
+            }
+            setState(() {});
           },
           controller: _pageController,
         ),
@@ -648,7 +664,7 @@ class _TaskPopUp extends State<TaskPopUp> {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: <Widget>[
-                FloatingActionButton(
+                FloatingActionButton.extended(
                   onPressed: () {
                     if (_currentPage != 0) {
                       print("jump backward");
@@ -658,19 +674,28 @@ class _TaskPopUp extends State<TaskPopUp> {
                       _pageController.jumpToPage(0);
                     }
                   },
-                  child: Icon(Icons.arrow_back),
+                  icon: Icon(Icons.arrow_back),
+                  label: Text("Back"),
                 ),
-                FloatingActionButton(
+                FloatingActionButton.extended(
                   onPressed: () {
                     if (_currentPage != _taskPages.length - 1) {
                       print("jump ahead");
                       _pageController.jumpToPage(_currentPage + 1);
                     } else {
-                      print("end reached");
+                      if (widget.didCompleteTask != null) {
+                        widget.didCompleteTask!();
+                      }
+
                       _pageController.jumpToPage(_taskPages.length - 1);
+
+                      Navigator.pop(context, true);
                     }
                   },
-                  child: Icon(Icons.arrow_forward),
+                  icon: reachedEnd
+                      ? Icon(Icons.check)
+                      : Icon(Icons.arrow_forward),
+                  label: reachedEnd ? Text("Complete") : Text("Next"),
                 ),
               ]),
         ),

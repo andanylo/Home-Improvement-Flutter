@@ -19,6 +19,7 @@ import 'firebase_options.dart';
 
 enum EditingMode { room, furniture }
 
+bool isRunning = false;
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -27,7 +28,10 @@ Future<void> main() async {
   );
 
   FirebaseAuth.instance.authStateChanges().listen((User? user) {
-    runApp(MaterialApp(home: (user == null) ? LoginPage() : UnityDemoScreen()));
+    if (isRunning == false) {
+      runApp(MaterialApp(home: LoginPage()));
+    }
+    isRunning = true;
   });
 }
 
@@ -123,10 +127,12 @@ class _UnityDemoScreenState extends State<UnityDemoScreen>
 
   Widget? unityWidget;
 
+  int points = 0;
+
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
-          title: const Text("Home improvement"),
+          title: const Text("Home maintenance"),
           automaticallyImplyLeading: false,
           leading: GestureDetector(
               onTap: () {
@@ -159,7 +165,11 @@ class _UnityDemoScreenState extends State<UnityDemoScreen>
   }
 
   Future<void> _signOut() async {
+    _unityWidgetController.postMessage('UIManager', 'resetApp', ' ');
+
     await FirebaseAuth.instance.signOut();
+
+    Navigator.pop(context);
   }
 
   Future<void> showMenuOptions(
@@ -214,9 +224,11 @@ class _UnityDemoScreenState extends State<UnityDemoScreen>
   }
 
   // Callback that connects the created controller to the unity controller
-  void onUnityCreated(controller) {
+  Future<void> onUnityCreated(controller) async {
+    controller.resume();
     _unityWidgetController = controller;
 
+    await _unityWidgetController.isLoaded();
     fetchFurniture();
     fetchRoom();
   }
@@ -353,6 +365,10 @@ class _UnityDemoScreenState extends State<UnityDemoScreen>
       }
     } else if (key == 'currentClosestFurniture') {
       currentClosestFurniture = mes.isEmpty ? null : mes;
+    } else if (key == 'didCompleteTaskWithAward') {
+      int taskPoints = int.parse(mes);
+      points += taskPoints;
+      setState(() {});
     }
   }
 
@@ -488,7 +504,7 @@ class _UnityDemoScreenState extends State<UnityDemoScreen>
                       'UIManager', 'rotateRoom', '');
                 },
                 icon: const Icon(
-                  Icons.rotate_right,
+                  Icons.rotate_left,
                   size: 40,
                 ),
                 isDisabled: roomCanBeEdited == false,
@@ -544,7 +560,7 @@ class _UnityDemoScreenState extends State<UnityDemoScreen>
                       'UIManager', 'rotateFurniture', '');
                 },
                 icon: const Icon(
-                  Icons.rotate_right,
+                  Icons.rotate_left,
                   size: 40,
                 ),
               ),
@@ -628,8 +644,39 @@ class _UnityDemoScreenState extends State<UnityDemoScreen>
 
     taskPopUp = TaskPopUp(shouldShowButton: shouldShowInteractButton);
     taskPopUp?.currentClosestFurniture = currentClosestFurniture;
+    taskPopUp?.didCompleteTask = () {
+      _unityWidgetController.postMessage('UIManager', 'didCompleteTask', '');
+    };
 
-    return [unity, taskPopUp ?? Container()];
+    return [
+      unity,
+      Align(
+          alignment: Alignment.topCenter,
+          child: Column(
+            children: [
+              const SizedBox(
+                height: 10,
+              ),
+              Container(
+                  padding: const EdgeInsets.only(left: 10, right: 10),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.all(Radius.circular(
+                            5.0) //                 <--- border radius here
+                        ),
+                  ),
+                  child: Text(
+                    "Points: $points",
+                    style: const TextStyle(
+                      color: Colors.blue,
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  )),
+            ],
+          )),
+      taskPopUp ?? Container()
+    ];
   }
 
   //Returns controls based on editing mode

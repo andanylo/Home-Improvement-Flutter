@@ -121,6 +121,8 @@ class _RegisterPage extends State<RegisterPage> {
                 try {
                   await UserManager.registerNewUser(UserObject(
                       _usernameTxt.text, _passwordTxt.text, _emailTxt.text));
+
+                  if (!mounted) return;
                   //Navigate to unity
                   Navigator.push(
                       context,

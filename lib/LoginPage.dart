@@ -107,6 +107,7 @@ class _LoginPage extends State<LoginPage> {
                       UserObject('', _passwordText.text, _emailText.text));
 
                   //Navigate to unity
+                  if (!mounted) return;
                   Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -135,6 +136,12 @@ class _LoginPage extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (FirebaseAuth.instance.currentUser != null) {
+      Future.delayed(Duration(milliseconds: 50), () {
+        Navigator.push(context,
+            MaterialPageRoute(builder: (context) => UnityDemoScreen()));
+      });
+    }
     return Scaffold(
         appBar: AppBar(
           title: Text(_title),

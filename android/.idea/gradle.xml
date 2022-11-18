@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="GradleSettings">
+    <option name="linkedExternalProjectsSettings">
+      <GradleProjectSettings>
+        <option name="testRunner" value="GRADLE" />
+        <option name="distributionType" value="DEFAULT_WRAPPED" />
+        <option name="externalProjectPath" value="$PROJECT_DIR$" />
+        <option name="modules">
+          <set>
+            <option value="$USER_HOME$/.pub-cache/hosted/pub.dartlang.org/firebase_auth-3.9.0/android" />
+            <option value="$USER_HOME$/.pub-cache/hosted/pub.dartlang.org/firebase_core-1.22.0/android" />
+            <option value="$USER_HOME$/.pub-cache/hosted/pub.dartlang.org/firebase_database-9.1.4/android" />
+            <option value="$USER_HOME$/.pub-cache/hosted/pub.dartlang.org/flutter_local_notifications-5.0.0+4/android" />
+            <option value="$USER_HOME$/.pub-cache/hosted/pub.dartlang.org/flutter_plugin_android_lifecycle-2.0.7/android" />
+            <option value="$USER_HOME$/.pub-cache/hosted/pub.dartlang.org/flutter_unity_widget-2022.2.0/android" />
+            <option value="$USER_HOME$/.pub-cache/hosted/pub.dartlang.org/webview_flutter_android-2.10.1/android" />
+            <option value="$PROJECT_DIR$" />
+            <option value="$PROJECT_DIR$/app" />
+            <option value="$PROJECT_DIR$/unityLibrary" />
+          </set>
+        </option>
+      </GradleProjectSettings>
+    </option>
+  </component>
+</project>

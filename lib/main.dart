@@ -3,18 +3,20 @@ import 'dart:convert';
 import 'dart:ffi';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_unity_widget/flutter_unity_widget.dart';
 import 'package:home_improvement/Database.dart';
-import 'package:home_improvement/FurnitureEditButton.dart';
-import 'package:home_improvement/FurnitureListPopUp.dart';
+import 'package:home_improvement/Furniture/FurnitureEditButton.dart';
+import 'package:home_improvement/Furniture/FurnitureListPopUp.dart';
 import 'package:home_improvement/LoginPage.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:home_improvement/RoomListPopUp.dart';
+import 'package:home_improvement/NotificationService.dart';
+import 'package:home_improvement/Room/RoomListPopUp.dart';
 import 'package:home_improvement/TaskPopUp.dart';
 import 'package:home_improvement/TaskValuesPopUp.dart';
-import 'FurnitureTemplate.dart';
-import 'RoomTemplate.dart';
+import 'Furniture/FurnitureTemplate.dart';
+import 'Room/RoomTemplate.dart';
 import 'firebase_options.dart';
 
 enum EditingMode { room, furniture }
@@ -27,11 +29,13 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  FirebaseAuth.instance.authStateChanges().listen((User? user) {
+  FirebaseAuth.instance.authStateChanges().listen((User? user) async {
     if (isRunning == false) {
       runApp(MaterialApp(home: LoginPage()));
+
+      isRunning = true;
+      await NotificationService().setup();
     }
-    isRunning = true;
   });
 }
 
@@ -130,38 +134,56 @@ class _UnityDemoScreenState extends State<UnityDemoScreen>
   int points = 0;
 
   Widget build(BuildContext context) {
-    return Scaffold(
-        appBar: AppBar(
-          title: const Text("Home maintenance"),
-          automaticallyImplyLeading: false,
-          leading: GestureDetector(
-              onTap: () {
-                setIsEditing();
-              },
-              child: this.isEditing
-                  ? const Center(
-                      child: Text("  Cancel",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                              fontWeight: FontWeight.w700, fontSize: 15)),
-                    )
-                  : const Icon(Icons.edit)),
-          actions: [
-            Padding(
-              padding: const EdgeInsets.only(right: 20),
-              child: GestureDetector(
-                onTapDown: (details) => {
-                  //Show account actions
-                  showMenuOptions(details, context)
-                },
-                child: const Icon(Icons.account_circle_outlined),
-              ),
+    SystemChrome.setSystemUIOverlayStyle(
+        SystemUiOverlayStyle(statusBarColor: Colors.white));
+    return WillPopScope(
+        child: AnnotatedRegion<SystemUiOverlayStyle>(
+          value: SystemUiOverlayStyle(
+              statusBarColor: Colors.white,
+              systemNavigationBarColor: Colors.green),
+          child: Scaffold(
+            appBar: AppBar(
+              backgroundColor: Colors.green,
+              title: const Text("Home maintenance"),
+              automaticallyImplyLeading: false,
+              leading: GestureDetector(
+                  onTap: () {
+                    setIsEditing();
+                  },
+                  child: this.isEditing
+                      ? const Center(
+                          child: Text("  Cancel",
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w700, fontSize: 15)),
+                        )
+                      : const Icon(Icons.edit)),
+              actions: [
+                Padding(
+                  padding: const EdgeInsets.only(right: 20),
+                  child: GestureDetector(
+                    onTapDown: (details) => {
+                      //Show account actions
+                      showMenuOptions(details, context)
+                    },
+                    child: const Icon(Icons.account_circle_outlined),
+                  ),
+                ),
+              ],
             ),
-          ],
+            body: Stack(
+              children:
+                  isEditing ? setUpEditingWindow() : disableEditingWindow(),
+            ),
+          ),
         ),
-        body: Stack(
-          children: isEditing ? setUpEditingWindow() : disableEditingWindow(),
-        ));
+        onWillPop: () async {
+          if (Navigator.of(context).userGestureInProgress)
+            return false;
+          else {
+            return true;
+          }
+        });
   }
 
   Future<void> _signOut() async {
@@ -341,21 +363,31 @@ class _UnityDemoScreenState extends State<UnityDemoScreen>
         String json = await Database.fetchPlayerTasks(user!.uid);
         _unityWidgetController.postMessage(
             'UIManager', 'didGetPlayerTasks', json);
+
+        //Set notifications
+        await setNotifications();
       });
     } else if (key == 'savePlayerTask') {
-      Database.savePlayerTask(
+      await Database.savePlayerTask(
           (FirebaseAuth.instance.currentUser == null
               ? ""
               : FirebaseAuth.instance.currentUser!.uid),
           mes,
           false);
+
+      //Set notifications
+      await setNotifications();
     } else if (key == 'updatePlayerTask') {
-      Database.savePlayerTask(
+      await Database.savePlayerTask(
           (FirebaseAuth.instance.currentUser == null
               ? ""
               : FirebaseAuth.instance.currentUser!.uid),
           mes,
           true);
+
+      //Set notifications
+      print('update');
+      await setNotifications();
     } else if (key == 'taskButtonStatus') {
       bool willShow = mes.toLowerCase() == 'true';
       if (willShow != shouldShowInteractButton) {
@@ -370,6 +402,19 @@ class _UnityDemoScreenState extends State<UnityDemoScreen>
       points += taskPoints;
       setState(() {});
     }
+  }
+
+  Future<void> setNotifications() async {
+    List<PlayerTask> playerTasks = await Database.fetchPlayerTasksAndDecode(
+        (FirebaseAuth.instance.currentUser == null
+            ? ""
+            : FirebaseAuth.instance.currentUser!.uid));
+
+    List<NotificationContent> contents =
+        NotificationService.convertTasksIntoNotifications(playerTasks);
+
+    NotificationService().setNotifications(contents);
+    print(contents);
   }
 
   //Set is editing, add 'Add' button
@@ -445,7 +490,9 @@ class _UnityDemoScreenState extends State<UnityDemoScreen>
       String name = editingFurnitureName!;
       FirebaseAuth.instance.authStateChanges().listen((User? user) async {
         Database.removeFurniture(user!.uid, id, name);
-        Database.removePlayerTask(user!.uid, id);
+        await Database.removePlayerTask(user!.uid, id);
+
+        setNotifications();
       });
     }
 

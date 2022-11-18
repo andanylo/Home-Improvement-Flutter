@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:home_improvement/ForgotPasswordPage.dart';
 import 'package:home_improvement/RegisterPage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:home_improvement/User.dart';
-import 'package:home_improvement/UserValidation.dart';
+import 'package:home_improvement/User/User.dart';
+import 'package:home_improvement/User/UserValidation.dart';
 
 import 'main.dart';
 
@@ -121,7 +122,12 @@ class _LoginPage extends State<LoginPage> {
           ),
         ),
         //Forgot password button
-        TextButton(onPressed: () {}, child: const Text("Forgot password?")),
+        TextButton(
+            onPressed: () {
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (context) => ForgotPassword()));
+            },
+            child: const Text("Forgot password?")),
 
         //Create a new account button
         TextButton(

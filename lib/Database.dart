@@ -2,13 +2,33 @@ import 'dart:convert';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
-import 'package:home_improvement/FurnitureTemplate.dart';
-import 'package:home_improvement/RoomTemplate.dart';
+import 'package:home_improvement/Furniture/FurnitureTemplate.dart';
+import 'package:home_improvement/Room/RoomTemplate.dart';
 import 'package:home_improvement/TaskValuesPopUp.dart';
 import 'package:home_improvement/Task_Demo.dart';
 import 'package:home_improvement/Task_Info.dart';
 import 'package:home_improvement/Task_Intro.dart';
-import 'package:home_improvement/User.dart';
+import 'package:home_improvement/User/User.dart';
+
+class PlayerTask {
+  late String task_title;
+  late String DelayTime;
+  late int award;
+  late String checkUpStatus;
+  late bool complete_Status;
+
+  PlayerTask();
+  factory PlayerTask.fromJson(Map<String, dynamic> json) {
+    PlayerTask task = PlayerTask();
+
+    task.task_title = json['task_title'];
+    task.DelayTime = json['DelayTime'];
+    task.award = json['award'];
+    task.checkUpStatus = json['checkUpStatus'];
+    task.complete_Status = json['complete_Status'];
+    return task;
+  }
+}
 
 class Database {
   //Save user
@@ -20,6 +40,8 @@ class Database {
       "username": user.username
     });
   }
+
+  //static void updatePassword(UserObject user, String uuid)
 
   //Save furniture to user
   static void saveFurniture(String uuid, String jsonObject, bool isUpdating) {
@@ -195,9 +217,10 @@ class Database {
   }
 
   //Save player tasks
-  static void savePlayerTask(String uuid, String jsonObject, bool isUpdating) {
+  static Future<void> savePlayerTask(
+      String uuid, String jsonObject, bool isUpdating) async {
     Map<String, dynamic> playerTask = jsonDecode(jsonObject);
-
+    String task_title = playerTask['task_title'];
     String furnitureID = playerTask['furnitureID'];
     String delayTime = playerTask['DelayTime'];
 
@@ -208,14 +231,16 @@ class Database {
     DatabaseReference db =
         FirebaseDatabase.instance.ref("PlayerTasks/$uuid/$furnitureID");
     if (isUpdating) {
-      db.update({
+      await db.update({
+        "task_title": task_title,
         "DelayTime": delayTime,
         "award": award,
         "checkUpStatus": checkUpStatus,
         "complete_Status": complete_Status
       });
     } else {
-      db.set({
+      await db.set({
+        "task_title": task_title,
         "DelayTime": delayTime,
         "award": award,
         "checkUpStatus": checkUpStatus,
@@ -239,11 +264,11 @@ class Database {
     db.remove();
   }
 
-  static void removePlayerTask(String uuid, String furnitureID) {
+  static Future<void> removePlayerTask(String uuid, String furnitureID) async {
     DatabaseReference db =
         FirebaseDatabase.instance.ref("PlayerTasks/$uuid/$furnitureID");
 
-    db.remove();
+    await db.remove();
   }
 
   //Fetch furnitures based on userID
@@ -292,6 +317,22 @@ class Database {
       return value;
     }
     return "";
+  }
+
+  //Fetch player tasks and return player task list
+  static Future<List<PlayerTask>> fetchPlayerTasksAndDecode(String uuid) async {
+    Map<String, dynamic> decoded =
+        jsonDecode(await Database.fetchPlayerTasks(uuid));
+
+    List<PlayerTask> playerTasks = [];
+    for (dynamic decodedTaskString in decoded.values) {
+      print(decodedTaskString);
+      Map<String, dynamic> dict = decodedTaskString;
+      PlayerTask decodedPlayerTask = PlayerTask.fromJson(dict);
+      playerTasks.add(decodedPlayerTask);
+    }
+
+    return playerTasks;
   }
 
   //Fetches furniture templates from firebase database, else throw an error
